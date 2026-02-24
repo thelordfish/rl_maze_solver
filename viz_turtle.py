@@ -66,7 +66,9 @@ class TurtleMazeViz:
     def move_agent(self, s, delay=0.001):
         self.agent.goto(self.cell_center_pixel(s.x, s.y))
         self.screen.update()
-        if delay > 0: time.sleep(delay)
+        if delay > 0:
+            self.screen._root.update()          # process pending OS events
+            self.screen._root.after(int(delay * 1000))  # non-blocking wait
 
     def draw_policy(self, Q):
         """Draws arrows showing the current best action in each cell."""

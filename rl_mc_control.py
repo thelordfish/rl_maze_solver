@@ -10,8 +10,8 @@ from policy_visualiser import PolicyVisualiser
 WIDTH, HEIGHT = 6, 6
 EPISODES = 100
 GAMMA = 0.99
-TAU = 0.3
-
+TAU = 1.0 #temperature - i.e. strength of the softmax
+STEP_CAP = 500
 
 def get_policy_map(Q, tau):
     """Helper to format Q-table for the Visualiser."""
@@ -61,7 +61,7 @@ def run_sync_mc():
             
             # Update Turtle Window
             turtle_viz.move_agent(s, delay=0.001) #
-            if len(episode_data) > 150: break
+            if len(episode_data) > STEP_CAP: break
 
         # --- B. Learning (Monte Carlo) ---
         G = 0
