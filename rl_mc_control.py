@@ -96,9 +96,9 @@ class MazeRunner:
             self.strategy = Softmax(tau=slider_val)
 
     def _on_algorithm_change(self, name):
-        if name == "monte_carlo":
+        if name == "MonteCarlo":
             self.algorithm = MonteCarlo(gamma=self.gamma)
-        elif name == "sarsa":
+        elif name == "SARSA":
             self.algorithm = SARSA(gamma=self.gamma, alpha=0.1)
         elif name =="QLearning":
             self.algorithm = QLearning(gamma=self.gamma, alpha=0.1)
@@ -206,6 +206,7 @@ class MazeRunner:
                 ep=0
                 self._reset_requested = False
                 self._update_visualisers(ep, 0)  # <-- add this
+                
                 self.turtle_viz.start_button.config(state="normal", bg="#22c55e")
                 self._started = False
                 print("Reset!")
@@ -225,7 +226,8 @@ class MazeRunner:
                 steps = self._run_episode_step()
 
             self._update_visualisers(ep, steps)
-  
+
+            print(f"Episode {ep} | Steps: {steps} | Algorithm: {type(self.algorithm).__name__}")
 
           
             ep+=1

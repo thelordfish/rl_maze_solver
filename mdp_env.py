@@ -80,7 +80,7 @@ class GridMazeMDP:
         gamma: float = 0.99,
         start_state: State | None = None,
         goal_state: State | None = None,
-        goal_reward: float = 100.0,
+        goal_reward: float =200.0,
         wall_bump_cost: float = -50.0
     ) -> None:
         self.width = width
