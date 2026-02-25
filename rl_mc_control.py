@@ -17,7 +17,7 @@ from mdp_env import ACTIONS, GridMazeMDP
 from viz_turtle import TurtleMazeViz
 from policy_visualiser import PolicyVisualiser
 from exploration_strategies import EpsilonGreedy, Softmax
-
+from algorithms import MonteCarlo, SARSA
 
 class MazeRunner:
     """
@@ -37,6 +37,9 @@ class MazeRunner:
         # Environment
         self.maze = generate_prim_maze(width, height, seed=seed)
         self.mdp = GridMazeMDP(width, height, self.maze.walls)
+
+        #Pick algorithm
+        self.algorithm = MonteCarlo(gamma=self.gamma)
 
         # Strategy (swappable via controls)
         self.strategy = Softmax(tau=2.5)
@@ -70,6 +73,7 @@ class MazeRunner:
 
     def reset_learning(self):
         """Zero out Q-table and return history."""
+        self.algorithm.reset()
         self.Q = {
             (x, y): {a: 0.0 for a in ACTIONS}
             for x in range(self.width)
@@ -92,7 +96,11 @@ class MazeRunner:
             self.strategy = Softmax(tau=slider_val)
 
     def _on_algorithm_change(self, name):
-        print(f"Algorithm: {name}")  # placeholder until SARSA/Q-learning added
+        if name == "monte_carlo":
+            self.algorithm = MonteCarlo(gamma=self.gamma)
+        elif name == "sarsa":
+            self.algorithm = SARSA(gamma=self.gamma, alpha=0.1)
+        print(f"Algorithm: {name}")
 
     def _on_reset(self):
         self._reset_requested = True
@@ -116,12 +124,8 @@ class MazeRunner:
         }
 
     # ---- Episode logic ----
-
-    def _generate_episode(self):
-        """
-        Run one episode: agent walks from start until goal or step cap.
-        Returns list of (state, action, reward) tuples.
-        """
+    def _run_episode_batch(self):
+        """For MC: collect full episode, learn at the end."""
         episode = []
         s = self.mdp.start()
 
@@ -132,30 +136,38 @@ class MazeRunner:
 
             episode.append(((s.x, s.y), a, r))
             s = s_next
-
             self.turtle_viz.move_agent(s, action=a, delay=0.001)
-
             if len(episode) > self.step_cap:
                 break
 
-        return episode
+        self.algorithm.learn(self.Q, episode)
+        return len(episode)
 
-    def _learn_from_episode(self, episode):
-        """
-        First-visit Monte Carlo update:
-        Walk backwards through the episode, accumulating returns.
-        """
-        G = 0
-        visited = set()
 
-        for i in range(len(episode) - 1, -1, -1):
-            (x, y), a, r = episode[i]
-            G = r + self.gamma * G
+    def _run_episode_step(self):
+        """For SARSA/Q-learning: learn every step."""
+        s = self.mdp.start()
+        a = self.strategy.choose(self.Q[(s.x, s.y)])
+        steps = 0
 
-            if ((x, y), a) not in visited:
-                visited.add(((x, y), a))
-                self.returns[(x, y, a)].append(G)
-                self.Q[(x, y)][a] = np.mean(self.returns[(x, y, a)])
+        while not self.mdp.is_terminal(s):
+            s_next = self.mdp.transition(s, a)
+            r = self.mdp.reward(s, a, s_next)
+
+            a_next = self.strategy.choose(self.Q[(s_next.x, s_next.y)])
+
+            self.algorithm.learn(self.Q, (s.x, s.y), a, r, (s_next.x, s_next.y), a_next)
+
+            s = s_next
+            a = a_next
+            steps += 1
+            self.turtle_viz.move_agent(s, action=a, delay=0.001)
+            if steps > self.step_cap:
+                break
+
+        return steps
+
+
 
     def _update_visualisers(self, episode_num, episode_length):
         """Push current policy to both visualisers."""
@@ -199,11 +211,16 @@ class MazeRunner:
             self._sync_slider_to_strategy()
 
             # Run one episode
-            episode = self._generate_episode()
-            self._learn_from_episode(episode)
-            self._update_visualisers(ep, len(episode))
 
-            print(f"Episode {ep} completed. ({len(episode)} steps)")
+            if self.algorithm.needs_full_episode():
+                steps = self._run_episode_batch()
+            else:
+                steps = self._run_episode_step()
+
+            self._update_visualisers(ep, steps)
+  
+
+          
             ep+=1
 
         plt.ioff()
