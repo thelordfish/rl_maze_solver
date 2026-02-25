@@ -81,7 +81,7 @@ class GridMazeMDP:
         start_state: State | None = None,
         goal_state: State | None = None,
         goal_reward: float = 100.0,
-        wall_bump_cost: float = -2.0
+        wall_bump_cost: float = -50.0
     ) -> None:
         self.width = width
         self.height = height

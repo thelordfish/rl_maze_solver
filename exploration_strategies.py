@@ -26,14 +26,20 @@ class EpsilonGreedy:
     def choose(self, q_values: Dict[str, float]) -> str:
         if random.random() < self.epsilon:
             return random.choice(list(q_values.keys()))
-        return max(q_values, key=q_values.get)
+        max_val = max(q_values.values())
+        best_actions = [a for a, v in q_values.items() if v == max_val]
+        return random.choice(best_actions)
 
     def get_probs(self, q_values: Dict[str, float]) -> Dict[str, float]:
-        """Return the full probability distribution (for the visualiser)."""
         actions = list(q_values.keys())
         n = len(actions)
-        best_a = max(q_values, key=q_values.get)
+        max_val = max(q_values.values())
 
+        # All tied → uniform
+        if all(v == max_val for v in q_values.values()):
+            return {a: 1.0 / n for a in actions}
+
+        best_a = max(q_values, key=q_values.get)
         probs = {}
         for a in actions:
             if a == best_a:

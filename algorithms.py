@@ -29,7 +29,9 @@ class MonteCarlo:
                 self.returns[key].append(G)
                 Q[(x, y)][a] = np.mean(self.returns[key])
 
-class SARSA:
+
+#TEMPORAL DIFFERENCE (TD) METHODS
+class SARSA:    #on-policy
     def __init__(self, gamma=0.99, alpha=0.1):
         self.gamma = gamma
         self.alpha = alpha
@@ -47,7 +49,7 @@ class SARSA:
         Q[s][a] += self.alpha * (r + self.gamma * q_next - q_current)
 
 
-class QLearning:
+class QLearning:    #off-policy
     def __init__(self, gamma=0.99, alpha=0.1):
         self.gamma = gamma
         self.alpha = alpha
@@ -55,8 +57,10 @@ class QLearning:
     def needs_full_episode(self):
         return False
 
-    def learn(self, Q, s, a, r, s_next, **kwargs):
-        """Learn from a single step: Q(s,a) += alpha * (r + gamma*max(Q(s')) - Q(s,a))"""
-        max_q_next = max(Q[(s_next[0], s_next[1])].values())
-        td_error = r + self.gamma * max_q_next - Q[(s[0], s[1])][a]
-        Q[(s[0], s[1])][a] += self.alpha * td_error
+    def reset(self):
+        pass
+
+    def learn(self, Q, s, a, r, s_next, a_next=None):
+        """Q(s,a) += alpha * (r + gamma * max(Q(s')) - Q(s,a))"""
+        max_q_next = max(Q[s_next].values())
+        Q[s][a] += self.alpha * (r + self.gamma * max_q_next - Q[s][a])

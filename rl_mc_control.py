@@ -17,12 +17,12 @@ from mdp_env import ACTIONS, GridMazeMDP
 from viz_turtle import TurtleMazeViz
 from policy_visualiser import PolicyVisualiser
 from exploration_strategies import EpsilonGreedy, Softmax
-from algorithms import MonteCarlo, SARSA
+from algorithms import MonteCarlo, SARSA, QLearning
 
 class MazeRunner:
     """
     Owns the environment, visualisers, Q-table, and learning loop.
-    No globals needed — everything lives here.
+
     """
 
     def __init__(self, width=6, height=6, seed=42, gamma=0.99,
@@ -88,7 +88,7 @@ class MazeRunner:
 
     # ---- UI callbacks ----
 
-    def _on_strategy_change(self, name):
+    def _on_strategy_change(self, name): 
         slider_val = self.turtle_viz.param_slider.get()
         if name == "epsilon_greedy":
             self.strategy = EpsilonGreedy(epsilon=slider_val)
@@ -100,6 +100,10 @@ class MazeRunner:
             self.algorithm = MonteCarlo(gamma=self.gamma)
         elif name == "sarsa":
             self.algorithm = SARSA(gamma=self.gamma, alpha=0.1)
+        elif name =="QLearning":
+            self.algorithm = QLearning(gamma=self.gamma, alpha=0.1)
+
+        self._reset_requested = True
         print(f"Algorithm: {name}")
 
     def _on_reset(self):
@@ -114,7 +118,6 @@ class MazeRunner:
             self.strategy.tau = val
 
     # ---- Policy helper ----
-
     def _get_policy_map(self):
         """Convert Q-table into probability dict for the visualiser."""
         return {
@@ -125,11 +128,13 @@ class MazeRunner:
 
     # ---- Episode logic ----
     def _run_episode_batch(self):
-        """For MC: collect full episode, learn at the end."""
         episode = []
         s = self.mdp.start()
 
         while not self.mdp.is_terminal(s):
+            if self._reset_requested:
+                return 0  # bail out, don't try to learn
+
             a = self.strategy.choose(self.Q[(s.x, s.y)])
             s_next = self.mdp.transition(s, a)
             r = self.mdp.reward(s, a, s_next)
@@ -140,20 +145,23 @@ class MazeRunner:
             if len(episode) > self.step_cap:
                 break
 
+        if self._reset_requested:
+            return 0
+
         self.algorithm.learn(self.Q, episode)
         return len(episode)
 
-
     def _run_episode_step(self):
-        """For SARSA/Q-learning: learn every step."""
         s = self.mdp.start()
         a = self.strategy.choose(self.Q[(s.x, s.y)])
         steps = 0
 
         while not self.mdp.is_terminal(s):
+            if self._reset_requested:
+                return 0
+
             s_next = self.mdp.transition(s, a)
             r = self.mdp.reward(s, a, s_next)
-
             a_next = self.strategy.choose(self.Q[(s_next.x, s_next.y)])
 
             self.algorithm.learn(self.Q, (s.x, s.y), a, r, (s_next.x, s_next.y), a_next)
@@ -166,7 +174,6 @@ class MazeRunner:
                 break
 
         return steps
-
 
 
     def _update_visualisers(self, episode_num, episode_length):
