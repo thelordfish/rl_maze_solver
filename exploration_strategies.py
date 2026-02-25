@@ -25,7 +25,7 @@ class EpsilonGreedy:
 
     def choose(self, q_values: Dict[str, float]) -> str:
         if random.random() < self.epsilon:
-            return random.choice(list(q_values.keys()))
+            return random.choice(list(q_values.keys())) 
         max_val = max(q_values.values())
         best_actions = [a for a, v in q_values.items() if v == max_val]
         return random.choice(best_actions)
