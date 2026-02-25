@@ -26,12 +26,12 @@ class MazeRunner:
     """
 
     def __init__(self, width=6, height=6, seed=42, gamma=0.99,
-                 step_cap=700, num_episodes=100):
+                 step_cap=100, num_episodes=100):
         # Config
         self.width = width
         self.height = height
         self.gamma = gamma
-        self.step_cap = step_cap
+        self.step_cap = width * height * 3
         self.num_episodes = num_episodes
 
         # Environment
